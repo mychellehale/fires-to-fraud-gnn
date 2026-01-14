@@ -1,0 +1,51 @@
+[project]
+name = "predictor"
+version = "0.1.0"
+description = "Spatio-Temporal Modeling: From Atmospheric Transport to Financial Fraud"
+authors = [{ name = "Mychelle Hale", email = "mychellehale@gmail.com" }]
+dependencies = [
+    "pandas>=2.0.0",
+    "numpy>=1.26.4,<2.0.0",  # Critical for Torch 2.2.2 compatibility
+    "geopandas>=0.13.0",
+    "mgwr>=2.1.2",
+    "torch==2.2.2",          # Last Intel Mac support
+    "torchvision==0.17.2",   # Must match Torch 2.2.2
+    "torch-geometric>=2.3.0",
+    "pyarrow>=12.0.0",
+    "scikit-learn>=1.2.0",
+    "xarray>=2025.12.0",
+    "netcdf4>=1.7.3",
+]
+requires-python = ">=3.11"
+
+[dependency-groups]
+dev = [
+    "pandas-stubs>=2.3.3.260113",
+    "pytest",
+    "ruff",
+]
+
+[tool.uv]
+managed = true
+
+[tool.mypy]
+python_version = "3.11"
+# This tells mypy where to look for your local modules
+mypy_path = "src"
+# Ignore missing stubs for external libraries globally
+ignore_missing_imports = true
+# Require type hints on all your functions (Thesis standard)
+disallow_untyped_defs = true
+# Use the local virtual environment for resolution
+python_executable = ".venv/bin/python"
+
+[[tool.mypy.overrides]]
+# List all libraries that don't have type stubs here
+module = [
+    "mgwr.*",
+    "geopandas.*",
+    "xarray.*",
+    "netCDF4.*",
+    "tqdm.*"
+]
+ignore_missing_imports = true
