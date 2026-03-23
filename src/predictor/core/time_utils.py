@@ -1,24 +1,25 @@
-import pandas as pd
+import polars as pl
+
 
 def normalize_timestamps(
-        df: pd.DataFrame, 
-        col: str, 
-        timezone: str = 'UTC'
-        )-> pd.DataFrame:
+    df: pl.DataFrame,
+    col: str,
+    timezone: str = "UTC",
+) -> pl.DataFrame:
     """
-    Docstring for normalize_timestamps
-    
-    :param df: Description
-    :type df: pd.DataFrame
-    :param col: Description
-    :type col: str
-    :param timezone: Description
-    :type timezone: str
-    :return: A DataFrame with standardized time
-    :rtype: DataFrame
+    Parses a string column to timezone-aware datetime.
+
+    Returns a new DataFrame; the original is never mutated.
+
+    Args:
+        df (pl.DataFrame): Input data.
+        col (str): Name of the string column containing timestamps.
+        timezone (str): IANA timezone string to attach (default 'UTC').
+
+    Returns:
+        pl.DataFrame: DataFrame with the column cast to Datetime and
+                      localized to the requested timezone.
     """
-
-    df[col] = pd.to_datetime(df[col], utc = True)
-
-    # We return the whole DataFrame, hence the pd.DataFrame hint
-    return df
+    return df.with_columns(
+        pl.col(col).str.to_datetime().dt.replace_time_zone(timezone).alias(col)
+    )
