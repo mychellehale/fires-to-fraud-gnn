@@ -495,45 +495,46 @@ def fig_conus_maps() -> None:
     EXTENT = [-125, -66, 24, 50]
     proj   = ccrs.PlateCarree()
 
+    from matplotlib.colors import Normalize
+
+    # Percentile-clipped norms for CO and PAN — prevents extreme outliers
+    # from washing out the colormap
+    co_norm  = Normalize(vmin=np.percentile(co,  5), vmax=np.percentile(co,  95))
+    pan_norm = Normalize(vmin=np.percentile(pan, 5), vmax=np.percentile(pan, 95))
+
     panels = [
-        ("Lightning Events",      lightning, "YlOrRd",  LogNorm(vmin=1,    vmax=lightning.max()),  "Total strikes (72h window)", True),
-        ("Fire Radiative Power",  fires,     "YlOrBr",  LogNorm(vmin=1,    vmax=fires.max()),      "Fire count",                 True),
-        ("CO Concentration",      co,        "Blues",   None,                                       "CO (ppb)",                   False),
-        ("PAN Concentration",     pan,       "RdPu",    None,                                       "PAN (ppbv)",                 False),
+        # (title, values, cmap, norm, cbar_label, mask_zeros)
+        ("Lightning Events",    lightning, "inferno",  LogNorm(vmin=1, vmax=lightning.max()), "Total strikes (72h window)", True),
+        ("Fire Activity",       fires,     "hot",      LogNorm(vmin=1, vmax=fires.max()),     "Fire count",                 True),
+        ("CO Concentration",    co,        "plasma",   co_norm,                               "CO (ppb)",                   False),
+        ("PAN Concentration",   pan,       "magma",    pan_norm,                              "PAN (ppbv)",                 False),
     ]
 
     fig = plt.figure(figsize=(18, 10))
     fig.patch.set_facecolor(PALETTE["bg"])
 
-    for i, (title, values, cmap, norm, cbar_label, log_scale) in enumerate(panels):
+    for i, (title, values, cmap, norm, cbar_label, mask_zeros) in enumerate(panels):
         ax = fig.add_subplot(2, 2, i + 1, projection=proj)
         ax.set_extent(EXTENT, crs=proj)
         ax.set_facecolor("#0d1117")
 
         # Coastlines + borders
         ax.add_feature(cfeature.COASTLINE.with_scale("50m"),
-                       linewidth=0.7, edgecolor="#546e7a")
+                       linewidth=0.7, edgecolor="#78909c")
         ax.add_feature(cfeature.BORDERS.with_scale("50m"),
-                       linewidth=0.6, edgecolor="#546e7a")
+                       linewidth=0.6, edgecolor="#78909c")
         ax.add_feature(cfeature.STATES.with_scale("50m"),
-                       linewidth=0.3, edgecolor="#37474f")
+                       linewidth=0.3, edgecolor="#546e7a")
         ax.add_feature(cfeature.OCEAN.with_scale("50m"),
                        facecolor="#0a1929")
         ax.add_feature(cfeature.LAKES.with_scale("50m"),
                        facecolor="#0a1929", edgecolor="#37474f", linewidth=0.3)
 
-        # Mask zeros for log-scaled panels
-        if log_scale:
-            mask = values > 0
-            sc = ax.scatter(
-                lons[mask], lats[mask], c=values[mask],
-                cmap=cmap, norm=norm, s=18, marker="s",
-                transform=proj, zorder=5, linewidths=0)
-        else:
-            sc = ax.scatter(
-                lons, lats, c=values,
-                cmap=cmap, norm=norm, s=18, marker="s",
-                transform=proj, zorder=5, linewidths=0)
+        mask = (values > 0) if mask_zeros else np.ones(len(values), dtype=bool)
+        sc = ax.scatter(
+            lons[mask], lats[mask], c=values[mask],
+            cmap=cmap, norm=norm, s=18, marker="s",
+            transform=proj, zorder=5, linewidths=0)
 
         cb = plt.colorbar(sc, ax=ax, orientation="horizontal",
                           pad=0.04, fraction=0.046, shrink=0.85)
