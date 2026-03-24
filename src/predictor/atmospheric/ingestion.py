@@ -1,12 +1,11 @@
 import logging
-from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Generator, TypeVar, cast
+from typing import Generator, cast
 
 import pandas as pd
 import geopandas as gpd
-import xarray as xr
-from utils import track_progress
+from .utils import track_progress
+from .cleaners import AtmosphericCleaner
 
 
 # 1.  THE INGESTOR CLASS
@@ -39,23 +38,22 @@ class AtmosphericIngestor:
         )
 
     def process_lightning_file(self, nc_path: Path) -> gpd.GeoDataFrame:
-        """Type-annotated Xarray processing."""
-        # Annotate as xr.Dataset
-        ds: xr.Dataset = xr.open_dataset(nc_path)
-        
-        # Access variables as xr.DataArray
-        times: xr.DataArray = ds['lightning_flash_time']
-        lats: xr.DataArray = ds['lightning_flash_lat']
-        lons: xr.DataArray = ds['lightning_flash_lon']
+        """Extracts lightning events from a LIS NetCDF file as a GeoDataFrame.
 
-        df = pd.DataFrame({
-            'strike_time': times.values,
-            'lat': lats.values,
-            'lon': lons.values
-        })
-        ds.close() # Clean up file handle
-        
-        df['strike_time'] = pd.to_datetime(df['strike_time']).dt.tz_localize('UTC')
+        Delegates reading and TAI93 conversion to AtmosphericCleaner to avoid
+        duplicating NetCDF parsing logic and Xarray decode workarounds.
+        """
+        df_pl = AtmosphericCleaner.clean_lis_netcdf(nc_path)
+        if df_pl.is_empty():
+            return gpd.GeoDataFrame()
+
+        df_pl = AtmosphericCleaner.convert_tai93(df_pl)
+        df = (
+            df_pl.select(["lat", "lon", "datetime"])
+            .rename({"datetime": "strike_time"})
+            .to_pandas()
+        )
+        df["strike_time"] = df["strike_time"].dt.tz_localize("UTC")
         return gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.lon, df.lat), crs="EPSG:4326")
 
     @track_progress(desc="Linking Gas, Fire, and Lightning")
