@@ -25,7 +25,7 @@ The 2026 GNN pipeline is designed to overcome all three limitations.
 
 ## What Did Not Change (By Design)
 
-These constraints are carried forward from the thesis and are *not* subject
+These constraints are carried forward from my thesis and are *not* subject
 to refactoring.  Changing them would break reproducibility against the
 published baseline.
 
@@ -67,7 +67,7 @@ published baseline.
 
 ### AtmosphericCleaner — New Methods
 
-These capabilities did not exist in the thesis pipeline and were added to
+These capabilities did not exist in my thesis pipeline and were added to
 complete the 2026 refactor.
 
 | Method | What It Does | Why It Was Added |
@@ -143,7 +143,7 @@ constraints were independent real limitations. This validates PanGAT as the corr
 answer, not just a workaround for a fixed bug.
 
 PanGAT is the only model in this comparison that achieves positive R² on a true spatial
-holdout. The comparison in the thesis was not measuring the same thing as PanGAT's evaluation.
+holdout. The comparison in my thesis was not measuring the same thing as PanGAT's evaluation.
 
 PanGAT stopped at epoch 100 of 500 via early stopping.
 
@@ -163,20 +163,20 @@ and `fire_3d_count = 0`. The model saw the same feature vector `[0, 0, CO, lat, 
 for almost every node and learned to predict the training mean.
 
 *What we went back to:* Monthly spatial aggregation (one row per grid cell),
-matching the thesis evaluation setup. Monthly totals spread lightning/fire
+matching my thesis evaluation setup. Monthly totals spread lightning/fire
 signal across 19-26% of cells instead of 1-3%.
 
 **2. 0.5° grid resolution for the comparison**
 
-*What we tried:* 0.5° × 0.5° cells (halved from the thesis 1° × 1°) for higher
+*What we tried:* 0.5° × 0.5° cells (halved from my thesis 1° × 1°) for higher
 spatial resolution.
 
-*Why it failed for model comparison:* OLS R²=0.038 at 0.5° vs the thesis OLS
+*Why it failed for model comparison:* OLS R²=0.038 at 0.5° vs my thesis OLS
 R²=0.061 at 1°. The correlation between CO and PAN drops at finer resolution
 because each cell captures more heterogeneous atmospheric conditions. The GNN
 could not beat GWR at 0.5° because the underlying signal ceiling was lower.
 
-*What we went back to:* 1° × 1° grid for the thesis comparison. The 0.5°
+*What we went back to:* 1° × 1° grid for my thesis comparison. The 0.5°
 resolution is retained in `build_graph_features.py` and `hovmoller.py` as the
 default for the GNN graph features — it is still the right resolution for the
 operational pipeline, just not for the apples-to-apples model comparison.
