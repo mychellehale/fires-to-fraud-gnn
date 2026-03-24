@@ -602,3 +602,36 @@ Which to use depends on the use case. For public health applications where a lar
 "Increasing model complexity reduces bias but increases variance. Simplifying reduces variance but increases bias.
 
 This project has examples at both extremes. High variance: running 600 epochs without early stopping gave train R²=0.274, test R²=-0.058. The model memorized 1,200 training nodes instead of learning a general pattern. High bias: global OLS at R²=0.061 applied one set of coefficients across all of CONUS — assumed the CO-PAN relationship was the same in Montana as in Los Angeles, and was consistently wrong everywhere. GWR is the extreme variance case: train R²=0.558, test R²=-85.4. Perfect local fit, zero generalization."
+
+---
+
+## 8. Product and Business Questions — Session 1 (2026-03-23)
+
+---
+
+### Q: How would you explain this model to a non-technical stakeholder?
+
+**Model answer:**
+"The goal was to predict levels of a secondary air pollutant called PAN across the US based on natural events — fires and lightning strikes, which generate the chemical precursors that form PAN.
+
+Think of a forest. Some trees are in areas with lots of dry brush and high lightning activity. Others are downwind in calmer areas. When predicting what happens to a specific tree, the model looks at its neighbors and learns which ones are most relevant. High-activity neighbors get weighted more heavily than quiet ones.
+
+We tested it by hiding 20% of locations from the model during training, then asking it to predict those. It explained about a third of the variation in pollution levels at places it had never seen — R²=0.323. Previous models only explained about 6%. That's the number that matters for whether this could actually be used in practice."
+
+---
+
+### Q: Your model explains 32% of the variance. That leaves 68% unexplained. Why should anyone care?
+
+**Model answer:**
+"This performed almost 6x better than previous models, which only explained 6% of the variation. More importantly, it's the first model in this comparison that actually generalizes to new locations. The previous best model — GWR — had R²=0.361, but that was measured on its own training points. When tested on held-out locations it had never seen, it collapsed to R²=-85.4. For any operational forecasting use case, generalization is the baseline requirement. Explaining 32% of variance at unseen locations beats explaining 36% at locations you already have.
+
+This was also just one month of data. With multiple years across different fire seasons, the model could learn seasonal patterns and perform significantly better."
+
+---
+
+### Q: Can we use this model right now to predict air quality during wildfire season?
+
+**Model answer:**
+"It's a strong starting point, but not ready for operational use yet. The model was trained on one month — September 2020 — so it hasn't seen seasonal variation across different years and fire conditions.
+
+The immediate next step is adding wind-directed edges using ERA5 wind field data. Right now edges connect cells by proximity. PAN travels downwind — a lightning cell 300km upwind matters far more than one crosswind at the same distance. That's a known improvement with a clear implementation path. Combined with multiple years of satellite data to capture seasonal patterns, this architecture could be operationally useful."
