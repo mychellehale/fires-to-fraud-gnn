@@ -25,7 +25,7 @@ The 2026 GNN pipeline is designed to overcome all three limitations.
 
 ## What Did Not Change (By Design)
 
-These constraints are carried forward from the thesis and are *not* subject
+These constraints are carried forward from my thesis and are *not* subject
 to refactoring.  Changing them would break reproducibility against the
 published baseline.
 
@@ -67,7 +67,7 @@ published baseline.
 
 ### AtmosphericCleaner — New Methods
 
-These capabilities did not exist in the thesis pipeline and were added to
+These capabilities did not exist in my thesis pipeline and were added to
 complete the 2026 refactor.
 
 | Method | What It Does | Why It Was Added |
@@ -118,16 +118,34 @@ complete the 2026 refactor.
 
 ### Final Results
 
-| Model | R² | RMSE | MAE | Notes |
-| :--- | :--- | :--- | :--- | :--- |
-| OLS (global) | 0.061 | 0.252 | 0.073 | Thesis baseline |
-| GTWR (adaptive) | 0.227 | 0.184 | 0.071 | Thesis best spatiotemporal |
-| GWR (non-adaptive) | 0.361 | 0.078 | 0.030 | **Thesis best overall** |
-| **PanGAT (ours)** | **0.323** | **0.069** | **0.041** | **Better RMSE than GWR** |
+| Model | R² | RMSE | MAE | Evaluation | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| OLS (thesis) | 0.061 | 0.252 | 0.073 | LOO-CV | Thesis baseline |
+| GTWR (thesis) | 0.227 | 0.184 | 0.071 | LOO-CV, 6% data | Thesis spatiotemporal |
+| GWR (thesis) | 0.361 | 0.078 | 0.030 | LOO-CV | Thesis best — not a holdout |
+| GWR (2026, train) | 0.558 | 0.068 | 0.028 | Train fit | Memorizes training points |
+| GWR (2026, test) | -85.4 | 2.384 | 0.348 | True spatial holdout | Collapses at unseen locations |
+| GTWR (2026, train) | 0.059 | 0.485 | — | Train fit | UTC-fixed timestamps, n=2000; worse than OLS |
+| GTWR (2026, test) | NaN | — | — | True spatial holdout | Degenerate — numerical instability in GWmodel |
+| **PanGAT (ours)** | **0.323** | **0.069** | **0.041** | **True spatial holdout** | **Generalizes** |
 
-PanGAT beats the thesis on RMSE (0.069 vs 0.078) and beats GTWR on both metrics.
-Stopped at epoch 100 of 500 via early stopping — the graph structure was sufficient
-to learn the spatial CO-PAN relationship quickly.
+**Key finding from rerunning GWR (run_baselines.py):** GWR's thesis R²=0.361 was computed
+using its internal leave-one-out cross-validation (LOO-CV), not a true spatial holdout. When
+rerun with an 80/20 spatial holdout on the modernized pipeline, GWR train R²=0.558 (excellent
+local fit) but test R²=-85.4 (complete collapse). GWR is a spatial interpolation technique,
+not a predictive model — it cannot generalize to unseen locations.
+
+**Key finding from rerunning GTWR (run_r_gtwr_only.R):** After fixing the UTC timezone bug,
+GTWR on n=2,000 still produces train R²=0.059 — worse than global OLS. The test predictions
+are degenerate (NaN), indicating numerical instability in GWmodel's bandwidth search at
+this sample size. The timezone bug was not GTWR's only problem: the linear kernel and compute
+constraints were independent real limitations. This validates PanGAT as the correct architectural
+answer, not just a workaround for a fixed bug.
+
+PanGAT is the only model in this comparison that achieves positive R² on a true spatial
+holdout. The comparison in my thesis was not measuring the same thing as PanGAT's evaluation.
+
+PanGAT stopped at epoch 100 of 500 via early stopping.
 
 ### What We Tried That Didn't Work (and Why)
 
@@ -145,20 +163,20 @@ and `fire_3d_count = 0`. The model saw the same feature vector `[0, 0, CO, lat, 
 for almost every node and learned to predict the training mean.
 
 *What we went back to:* Monthly spatial aggregation (one row per grid cell),
-matching the thesis evaluation setup. Monthly totals spread lightning/fire
+matching my thesis evaluation setup. Monthly totals spread lightning/fire
 signal across 19-26% of cells instead of 1-3%.
 
 **2. 0.5° grid resolution for the comparison**
 
-*What we tried:* 0.5° × 0.5° cells (halved from the thesis 1° × 1°) for higher
+*What we tried:* 0.5° × 0.5° cells (halved from my thesis 1° × 1°) for higher
 spatial resolution.
 
-*Why it failed for model comparison:* OLS R²=0.038 at 0.5° vs the thesis OLS
+*Why it failed for model comparison:* OLS R²=0.038 at 0.5° vs my thesis OLS
 R²=0.061 at 1°. The correlation between CO and PAN drops at finer resolution
 because each cell captures more heterogeneous atmospheric conditions. The GNN
 could not beat GWR at 0.5° because the underlying signal ceiling was lower.
 
-*What we went back to:* 1° × 1° grid for the thesis comparison. The 0.5°
+*What we went back to:* 1° × 1° grid for my thesis comparison. The 0.5°
 resolution is retained in `build_graph_features.py` and `hovmoller.py` as the
 default for the GNN graph features — it is still the right resolution for the
 operational pipeline, just not for the apples-to-apples model comparison.
