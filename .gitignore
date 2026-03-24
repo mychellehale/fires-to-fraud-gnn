@@ -9,4 +9,13 @@ wheels/
 
 # Virtual environments
 .venv
-MEDIUM_ARTICLE.md
+
+# Private / internal docs
+docs/MEDIUM_ARTICLE.md
+docs/INTERVIEW_PREP.md
+docs/REASONING.md
+docs/REFACTOR_DOCS.md
+docs/dissertation.pdf
+
+# Claude memory
+.claude/
