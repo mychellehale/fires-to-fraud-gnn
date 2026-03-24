@@ -515,3 +515,90 @@ errors have public health implications, RMSE is the more relevant metric.
 
 **What it shows:** You can interpret competing metrics and explain trade-offs.
 You don't just report the number — you understand what it means.
+
+---
+
+## 7. Practiced Interview Questions — Session 1 (2026-03-23)
+
+---
+
+### Q: Walk me through your GNN project.
+
+**Model answer:**
+"I rebuilt my master's thesis as a Graph Attention Network and beat my own RMSE — R²=0.323 on a true 20% spatial holdout. The goal was to predict levels of PAN, a secondary air pollutant that forms when lightning and wildfire smoke react with sunlight, across CONUS.
+
+My thesis had three known limitations I couldn't fix at the time. First, compute constraints forced GTWR to use only 6% of the data. Second, I couldn't get accurate timestamps so every observation got the same timezone, corrupting temporal distances. Third, the fixed linear kernel couldn't adapt to PAN's variable atmospheric lifetime.
+
+The GNN fixed all three: it processes the full dataset, the 2026 pipeline normalizes to UTC, and a Graph Attention Network uses learned attention weights instead of a fixed kernel. It's the only model in the comparison that generalizes to unseen locations."
+
+---
+
+### Q: GWR had R²=0.361 — higher than your GNN's 0.323. How do you explain that?
+
+**Model answer:**
+"GWR's R²=0.361 came from leave-one-out cross-validation (LOO-CV) — baked into how GWR fits. It withholds one point, predicts it using all the others, puts it back, and repeats. That's interpolation between points you already have, not generalization. When I reran GWR with a true 20% spatial holdout, test R² was -85.4. It completely collapsed. The GNN achieved R²=0.323 on that same holdout. Those two numbers were never measuring the same thing. GWR is a spatial interpolation technique — it memorizes training locations beautifully but has no mechanism for predicting at locations it's never seen."
+
+---
+
+### Q: Why log1p? Why not just StandardScaler on raw counts?
+
+**Model answer:**
+"StandardScaler works best when data is roughly bell-shaped. Lightning counts weren't — median=38, max=2,311, heavily right-skewed. When I applied StandardScaler directly, training loss oscillated for 200 epochs with no improvement. The max value was ~10 standard deviations from the mean — a pathological outlier that dominated the GAT attention calculation and broke gradient flow.
+
+log1p compresses the tail: log1p(0)=0, log1p(38)≈3.6, log1p(2311)≈7.7. Range compressed from 2,311 to 7.7. StandardScaler then has something usable. I used log1p not log because log(0) is undefined — log1p handles zero-activity cells cleanly."
+
+---
+
+### Q: Why GAT specifically over GCN or GraphSAGE?
+
+**Model answer:**
+"GCN averages neighbor features with fixed equal weights — every neighbor contributes the same amount. GraphSAGE samples a fixed number of neighbors and aggregates them, but still doesn't learn which neighbors matter more. GAT learns attention weights between nodes based on their features. A high-lightning cell gets weighted differently than a quiet cell, even at the same distance.
+
+The basis of my project is that the CO-PAN relationship isn't uniform across space. GAT directly encodes that assumption — it replaces GWR's fixed Gaussian kernel with learned weights."
+
+---
+
+### Q: Your model stopped at epoch 100 of 500. How did you know when to stop?
+
+**Model answer:**
+"I monitored test R² every 5 epochs with a patience parameter of 60 epochs. If test R² hadn't improved in 60 epochs, training stopped and the best checkpoint was restored. Without early stopping, I got train R²=0.274 but test R²=-0.058. The model memorized 1,200 training nodes instead of learning a general pattern. Early stopping caught that automatically."
+
+---
+
+### Q (Behavioral): Tell me about a time you diagnosed a failing experiment.
+
+**Model answer:**
+"I built a temporal train/test split — train on September 2-25, test on September 26-30 — and got R²=0.002. Before changing the model, I checked the data. I ran `(lightning_3d_count > 0).mean()` and found only 1.3% of daily rows had any lightning signal. 97% of nodes had the same feature vector — the model had nothing discriminating to learn from and predicted the training mean.
+
+That told me it was a feature sparsity problem, not a model problem. I switched to monthly aggregation — one row per grid cell, summing across September. Coverage jumped from 1.3% to 19.6%. Final model achieved R²=0.323 on a true spatial holdout."
+
+---
+
+### Q: What would you do differently with more time?
+
+**Model answer:**
+"Three things. First, wind-directed edges. ERA5 reanalysis provides 6-hourly wind fields across the study domain. Right now edges connect by proximity. PAN travels downwind — a lightning cell 300km upwind should connect to cells downstream; a crosswind cell shouldn't. No published atmospheric chemistry GNN does this and it's the known fix for the R² gap.
+
+Second, more months of data. September 2020 is one month. The temporal GNN architecture needs multiple seasons to learn seasonal patterns.
+
+Third, transfer learning to fraud detection. The same graph topology — sparse precursor events, directed signal propagation, causal lookback windows — appears in financial fraud detection. My hypothesis is that the same architecture transfers by swapping the node features."
+
+---
+
+### Q: What's the difference between R² and RMSE? How do you decide which to report?
+
+**Model answer:**
+"R² measures how much variance in the target the model explains relative to just predicting the mean. Perfect model is R²=1, predicting the mean is R²=0, and worse than the mean is negative — which is exactly what happened with GWR at -85.4.
+
+RMSE is average prediction error in the original units. Lower is better.
+
+Which to use depends on the use case. For public health applications where a large error at a single location has real consequences, RMSE is more relevant. R² can be driven up by fitting high-variance regions well while making large errors elsewhere. In this project GWR had R²=0.361 but RMSE=0.078; PanGAT had R²=0.323 but RMSE=0.069. PanGAT makes smaller individual errors — more important for operational forecasting."
+
+---
+
+### Q: What is the bias-variance tradeoff? Give an example from your project.
+
+**Model answer:**
+"Increasing model complexity reduces bias but increases variance. Simplifying reduces variance but increases bias.
+
+This project has examples at both extremes. High variance: running 600 epochs without early stopping gave train R²=0.274, test R²=-0.058. The model memorized 1,200 training nodes instead of learning a general pattern. High bias: global OLS at R²=0.061 applied one set of coefficients across all of CONUS — assumed the CO-PAN relationship was the same in Montana as in Los Angeles, and was consistently wrong everywhere. GWR is the extreme variance case: train R²=0.558, test R²=-85.4. Perfect local fit, zero generalization."
