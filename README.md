@@ -82,4 +82,8 @@ python research/train_gnn.py
 ---
 
 **Author:** Mychelle Hale
-**Status:** Phase 1 complete. Phase 2 (wind-directed edges via ERA5) in planning.
+
+**Status:**
+- Phase 1: atmospheric PAN prediction with a Graph Attention Network. Complete.
+- Phase 2: wind-directed edges via ERA5. Planned.
+- Phase 3: transfer the spatio-temporal graph approach to transaction fraud detection. Planned.
